@@ -983,3 +983,73 @@
   render();
 })();
 </script>
+<script id="yt-inline">
+/* 유튜브 영상: 클릭하면 유튜브로 이동하지 않고 화면에서 바로 재생 (큰 칸은 그 자리에서, 작은 썸네일·일반 링크는 큰 창으로) */
+(function(){
+  function reset(){
+    document.querySelectorAll('.video-link.playing').forEach(function(d){ if(d._orig) d.parentNode.replaceChild(d._orig,d); });
+    var m=document.getElementById('ytModal'); if(m) m.remove();
+  }
+  function frame(id,title){
+    var f=document.createElement('iframe');
+    f.src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0&modestbranding=1&playsinline=1';
+    f.title=title||'YouTube 영상';
+    f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f.allowFullscreen=true;
+    f.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;';
+    return f;
+  }
+  function fallback(href,pos){
+    var l=document.createElement('a'); l.href=href; l.target='_blank'; l.rel='noopener noreferrer'; l.setAttribute('data-yt-out','1');
+    l.textContent='유튜브에서 보기 ↗';
+    l.style.cssText=pos+'z-index:3;background:rgba(0,0,0,.78);color:#fff;font-size:13px;padding:6px 13px;border-radius:999px;text-decoration:none;font-family:inherit;';
+    return l;
+  }
+  function showModal(id,title,href){
+    var w=document.createElement('div'); w.id='ytModal';
+    w.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center;padding:4vh 4vw;';
+    var box=document.createElement('div');
+    box.style.cssText='position:relative;width:min(92vw,calc(84vh * 16 / 9),1100px);aspect-ratio:16/9;';
+    box.appendChild(frame(id,title));
+    var x=document.createElement('button'); x.type='button'; x.textContent='✕ 닫기';
+    x.style.cssText='position:absolute;top:-46px;right:0;background:#fff;color:#111;border:0;border-radius:999px;padding:8px 18px;font-size:15px;font-weight:700;cursor:pointer;';
+    x.addEventListener('click',reset);
+    box.appendChild(x);
+    box.appendChild(fallback(href,'position:absolute;left:0;bottom:-44px;'));
+    w.appendChild(box);
+    w.addEventListener('click',function(ev){ if(ev.target===w) reset(); });
+    document.body.appendChild(w);
+  }
+  function vid(href){
+    try{ var u=new URL(href,location.href); if(!/^(www\.|m\.)?(youtube\.com|youtu\.be)$/.test(u.hostname)) return null; }catch(err){ return null; }
+    var m=String(href).match(/(?:[?&]v=|youtu\.be\/)([\w-]{11})/); return m?m[1]:null;
+  }
+  window.ytOpen=function(href,title){   // 자바스크립트로 유튜브를 여는 버튼용: true면 화면에서 재생, false면 호출한 쪽이 원래대로 처리
+    if(location.protocol==='file:') return false;
+    var id=vid(href); if(!id) return false;
+    reset(); showModal(id,title,href); return true;
+  };
+  document.addEventListener('click',function(e){
+    if(location.protocol==='file:') return;   // 내려받아 컴퓨터에서 연 파일(소장용)은 원래대로 유튜브로 이동
+    var a=e.target.closest('a[href]'); if(!a || a.hasAttribute('data-yt-out')) return;
+    var id=vid(a.href); if(!id) return;
+    e.preventDefault(); e.stopPropagation();
+    var title=(a.querySelector('img')||{}).alt||(a.textContent||'').trim()||'YouTube 영상';
+    reset();
+    var inPlace=a.classList.contains('video-link') && !a.classList.contains('small') && a.getBoundingClientRect().width>=400;
+    if(!inPlace){ showModal(id,title,a.href); return; }
+    var d=document.createElement('div');
+    d.className=a.className+' playing'; d.style.cssText=a.style.cssText; d._orig=a;
+    d.appendChild(frame(id,title));
+    d.appendChild(fallback(a.href,'position:absolute;left:10px;top:10px;'));
+    a.parentNode.replaceChild(d,a);
+  },true);
+  document.addEventListener('keydown',function(e){
+    if(!document.getElementById('ytModal')) return;
+    if(e.key==='Escape'){ e.stopPropagation(); reset(); }
+    else if(e.key==='ArrowRight'||e.key==='ArrowLeft'||e.key===' '){ e.stopPropagation(); }
+  },true);
+  var g=window.goSlide;
+  if(typeof g==='function') window.goSlide=function(){ reset(); return g.apply(this,arguments); };   // 슬라이드를 넘기면 영상 정지
+})();
+</script>
